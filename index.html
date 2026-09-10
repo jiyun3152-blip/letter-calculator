@@ -50,6 +50,11 @@
             font-family: 'NostalgicMyoeunHeullim', inherit;
             color: #000;
         }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
         textarea {
             width: 100%;
             padding: 12px;
@@ -137,6 +142,10 @@
                 <label for="maxChars">최대 글자 수:</label>
                 <input type="number" id="maxChars" value="1000" min="1">
             </div>
+            <div class="setting-item">
+                <input type="checkbox" id="excludeSpaces">
+                <label for="excludeSpaces">공백 미포함 체크</label>
+            </div>
         </div>
 
         <textarea id="textArea" placeholder="여기에 텍스트를 입력하세요..."></textarea>
@@ -163,6 +172,7 @@
     <script>
         const textArea = document.getElementById('textArea');
         const maxCharsInput = document.getElementById('maxChars');
+        const excludeSpacesCheckbox = document.getElementById('excludeSpaces');
         const charCountDisplay = document.getElementById('charCount');
         const remainingCharsDisplay = document.getElementById('remainingChars');
         const progressBar = document.getElementById('progressBar');
@@ -171,7 +181,10 @@
         function updateCount() {
             const text = textArea.value;
             const maxChars = parseInt(maxCharsInput.value) || 1000;
-            const charCount = text.length;
+            const excludeSpaces = excludeSpacesCheckbox.checked;
+            
+            // 공백 미포함 체크 여부에 따라 글자 수 계산
+            const charCount = excludeSpaces ? text.replace(/\s/g, '').length : text.length;
             const remainingChars = maxChars - charCount;
 
             charCountDisplay.textContent = charCount;
@@ -199,15 +212,27 @@
 
         textArea.addEventListener('input', function(e) {
             const maxChars = parseInt(maxCharsInput.value) || 1000;
+            const excludeSpaces = excludeSpacesCheckbox.checked;
             
-            if (this.value.length > maxChars) {
-                this.value = this.value.substring(0, maxChars);
+            let text = this.value;
+            // 공백 미포함 체크 여부에 따라 입력 제한
+            const charCount = excludeSpaces ? text.replace(/\s/g, '').length : text.length;
+            
+            if (charCount > maxChars) {
+                if (excludeSpaces) {
+                    // 공백을 제외한 글자 수가 최대값을 넘으면 마지막 문자 제거
+                    this.value = text.slice(0, -1);
+                } else {
+                    // 공백 포함 글자 수가 최대값을 넘으면 제한
+                    this.value = text.substring(0, maxChars);
+                }
             }
             
             updateCount();
         });
 
         maxCharsInput.addEventListener('change', updateCount);
+        excludeSpacesCheckbox.addEventListener('change', updateCount);
 
         updateCount();
     </script>
