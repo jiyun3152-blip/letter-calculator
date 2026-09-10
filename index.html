@@ -174,15 +174,12 @@
             const charCount = text.length;
             const remainingChars = maxChars - charCount;
 
-            // 글자 수 표시
             charCountDisplay.textContent = charCount;
             remainingCharsDisplay.textContent = Math.max(remainingChars, 0);
 
-            // 진행률 바 업데이트
             const percent = Math.min((charCount / maxChars) * 100, 100);
             progressBar.style.width = percent + '%';
 
-            // 색상 변경
             if (charCount > maxChars) {
                 charCountDisplay.classList.add('warning');
                 progressBar.classList.add('danger');
@@ -200,7 +197,6 @@
             }
         }
 
-        // 입력 제한
         textArea.addEventListener('input', function(e) {
             const maxChars = parseInt(maxCharsInput.value) || 1000;
             
@@ -213,7 +209,6 @@
 
         maxCharsInput.addEventListener('change', updateCount);
 
-        // 초기 업데이트
         updateCount();
     </script>
 </body>
