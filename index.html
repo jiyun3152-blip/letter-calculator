@@ -234,6 +234,9 @@
     </div>
 
     <script>
+        // 고유한 ID 생성 (각 iframe마다 다름)
+        const instanceId = 'wordCounter_' + Math.random().toString(36).substr(2, 9);
+
         const textArea = document.getElementById('textArea');
         const maxCharsInput = document.getElementById('maxChars');
         const excludeSpacesCheckbox = document.getElementById('excludeSpaces');
@@ -247,9 +250,9 @@
 
         // localStorage에서 저장된 데이터 불러오기
         function loadData() {
-            const savedText = localStorage.getItem('wordCounterText');
-            const savedMaxChars = localStorage.getItem('wordCounterMaxChars');
-            const savedExcludeSpaces = localStorage.getItem('wordCounterExcludeSpaces');
+            const savedText = localStorage.getItem(instanceId + '_text');
+            const savedMaxChars = localStorage.getItem(instanceId + '_maxChars');
+            const savedExcludeSpaces = localStorage.getItem(instanceId + '_excludeSpaces');
 
             if (savedText) textArea.value = savedText;
             if (savedMaxChars) maxCharsInput.value = savedMaxChars;
@@ -260,9 +263,9 @@
 
         // localStorage에 데이터 저장하기
         function saveData() {
-            localStorage.setItem('wordCounterText', textArea.value);
-            localStorage.setItem('wordCounterMaxChars', maxCharsInput.value);
-            localStorage.setItem('wordCounterExcludeSpaces', JSON.stringify(excludeSpacesCheckbox.checked));
+            localStorage.setItem(instanceId + '_text', textArea.value);
+            localStorage.setItem(instanceId + '_maxChars', maxCharsInput.value);
+            localStorage.setItem(instanceId + '_excludeSpaces', JSON.stringify(excludeSpacesCheckbox.checked));
         }
 
         function updateCount() {
@@ -347,7 +350,7 @@
         clearBtn.addEventListener('click', function() {
             if (confirm('정말 초기화하시겠습니까?')) {
                 textArea.value = '';
-                localStorage.removeItem('wordCounterText');
+                localStorage.removeItem(instanceId + '_text');
                 updateCount();
             }
         });
