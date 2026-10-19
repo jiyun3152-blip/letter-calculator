@@ -11,9 +11,8 @@
             font-weight: normal;
             font-display: swap;
         }
-
         body {
-            font-family: 'NostalgicMyoeunHeullim', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'NostalgicMyoeunHeullim', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             max-width: 600px;
             margin: 20px auto;
             padding: 20px;
@@ -146,7 +145,6 @@
             font-size: 14px;
             cursor: pointer;
             font-weight: 500;
-            transition: background-color 0.3s;
         }
         .btn-copy {
             background-color: #51cf66;
@@ -173,20 +171,9 @@
             border-radius: 4px;
             font-weight: bold;
             z-index: 1000;
-            animation: slideIn 0.3s ease-in-out;
         }
         .copy-notification.show {
             display: block;
-        }
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
         }
     </style>
 </head>
@@ -204,7 +191,7 @@
         </div>
 
         <textarea id="textArea" placeholder="여기에 텍스트를 입력하세요..."></textarea>
-        
+
         <div class="warning-message" id="warningMessage">
             ⚠️ 최대 글자 수를 초과했습니다. 더 이상 입력할 수 없습니다.
         </div>
@@ -214,7 +201,7 @@
                 <div class="stat-label">글자 수</div>
                 <div class="stat-value" id="charCount">0</div>
                 <div class="progress-bar">
-                    <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                    <div class="progress-fill" id="progressBar"></div>
                 </div>
             </div>
             <div class="stat-item">
@@ -229,13 +216,12 @@
         </div>
     </div>
 
-    <div class="copy-notification" id="copyNotification">
-        ✓ 복사되었습니다!
-    </div>
+    <div class="copy-notification" id="copyNotification">✓ 복사되었습니다!</div>
 
     <script>
-        // 고유한 ID 생성 (각 iframe마다 다름)
-        const instanceId = 'wordCounter_' + Math.random().toString(36).substr(2, 9);
+        // URL의 ?id= 값으로 저장 키를 고정 (예: ?id=1, ?id=2 ...)
+        const params = new URLSearchParams(window.location.search);
+        const KEY = 'wordCounter_' + (params.get('id') || 'default');
 
         const textArea = document.getElementById('textArea');
         const maxCharsInput = document.getElementById('maxChars');
@@ -248,114 +234,91 @@
         const clearBtn = document.getElementById('clearBtn');
         const copyNotification = document.getElementById('copyNotification');
 
-        // localStorage에서 저장된 데이터 불러오기
-        function loadData() {
-            const savedText = localStorage.getItem(instanceId + '_text');
-            const savedMaxChars = localStorage.getItem(instanceId + '_maxChars');
-            const savedExcludeSpaces = localStorage.getItem(instanceId + '_excludeSpaces');
+        function countChars(text) {
+            return excludeSpacesCheckbox.checked ? text.replace(/\s/g, '').length : text.length;
+        }
 
-            if (savedText) textArea.value = savedText;
-            if (savedMaxChars) maxCharsInput.value = savedMaxChars;
-            if (savedExcludeSpaces) excludeSpacesCheckbox.checked = JSON.parse(savedExcludeSpaces);
+        function loadData() {
+            const savedText = localStorage.getItem(KEY + '_text');
+            const savedMax = localStorage.getItem(KEY + '_max');
+            const savedExclude = localStorage.getItem(KEY + '_exclude');
+
+            if (savedText !== null) textArea.value = savedText;
+            if (savedMax !== null) maxCharsInput.value = savedMax;
+            if (savedExclude !== null) excludeSpacesCheckbox.checked = JSON.parse(savedExclude);
 
             updateCount();
         }
 
-        // localStorage에 데이터 저장하기
         function saveData() {
-            localStorage.setItem(instanceId + '_text', textArea.value);
-            localStorage.setItem(instanceId + '_maxChars', maxCharsInput.value);
-            localStorage.setItem(instanceId + '_excludeSpaces', JSON.stringify(excludeSpacesCheckbox.checked));
+            localStorage.setItem(KEY + '_text', textArea.value);
+            localStorage.setItem(KEY + '_max', maxCharsInput.value);
+            localStorage.setItem(KEY + '_exclude', JSON.stringify(excludeSpacesCheckbox.checked));
         }
 
         function updateCount() {
-            const text = textArea.value;
             const maxChars = parseInt(maxCharsInput.value) || 1000;
-            const excludeSpaces = excludeSpacesCheckbox.checked;
-            
-            const charCount = excludeSpaces ? text.replace(/\s/g, '').length : text.length;
-            const remainingChars = maxChars - charCount;
+            const charCount = countChars(textArea.value);
+            const remaining = maxChars - charCount;
+            const percent = Math.min((charCount / maxChars) * 100, 100);
 
             charCountDisplay.textContent = charCount;
-            remainingCharsDisplay.textContent = Math.max(remainingChars, 0);
-
-            const percent = Math.min((charCount / maxChars) * 100, 100);
+            remainingCharsDisplay.textContent = Math.max(remaining, 0);
             progressBar.style.width = percent + '%';
 
-            if (charCount > maxChars) {
-                charCountDisplay.classList.add('warning');
-                progressBar.classList.add('danger');
-                textArea.classList.add('exceeded');
-                warningMessage.classList.add('show');
-            } else {
-                charCountDisplay.classList.remove('warning');
-                textArea.classList.remove('exceeded');
-                warningMessage.classList.remove('show');
-                if (percent > 80) {
-                    progressBar.classList.add('warning');
-                } else {
-                    progressBar.classList.remove('warning', 'danger');
-                }
-            }
+            const over = charCount > maxChars;
+            charCountDisplay.classList.toggle('warning', over);
+            textArea.classList.toggle('exceeded', over);
+            warningMessage.classList.toggle('show', over);
+            progressBar.classList.toggle('danger', over);
+            progressBar.classList.toggle('warning', !over && percent > 80);
         }
 
-        // 텍스트 입력할 때마다 저장
-        textArea.addEventListener('input', function(e) {
+        textArea.addEventListener('input', function () {
             const maxChars = parseInt(maxCharsInput.value) || 1000;
-            const excludeSpaces = excludeSpacesCheckbox.checked;
-            
-            let text = this.value;
-            const charCount = excludeSpaces ? text.replace(/\s/g, '').length : text.length;
-            
-            if (charCount > maxChars) {
-                if (excludeSpaces) {
-                    this.value = text.slice(0, -1);
-                } else {
-                    this.value = text.substring(0, maxChars);
-                }
+
+            // 제한을 넘으면 입력을 되돌림 (공백 포함/미포함 기준 모두 적용)
+            while (countChars(this.value) > maxChars && this.value.length > 0) {
+                this.value = this.value.slice(0, -1);
             }
-            
+
             updateCount();
             saveData();
         });
 
-        maxCharsInput.addEventListener('change', function() {
+        maxCharsInput.addEventListener('change', function () {
             updateCount();
             saveData();
         });
 
-        excludeSpacesCheckbox.addEventListener('change', function() {
+        excludeSpacesCheckbox.addEventListener('change', function () {
             updateCount();
             saveData();
         });
 
-        // 전체 복사 버튼
-        copyBtn.addEventListener('click', function() {
+        copyBtn.addEventListener('click', function () {
             if (textArea.value.length === 0) {
                 alert('복사할 텍스트가 없습니다.');
                 return;
             }
-
-            navigator.clipboard.writeText(textArea.value).then(function() {
+            navigator.clipboard.writeText(textArea.value).then(function () {
                 copyNotification.classList.add('show');
-                setTimeout(function() {
+                setTimeout(function () {
                     copyNotification.classList.remove('show');
                 }, 2000);
-            }).catch(function(err) {
+            }).catch(function () {
                 alert('복사에 실패했습니다.');
             });
         });
 
-        // 초기화 버튼
-        clearBtn.addEventListener('click', function() {
+        clearBtn.addEventListener('click', function () {
             if (confirm('정말 초기화하시겠습니까?')) {
                 textArea.value = '';
-                localStorage.removeItem(instanceId + '_text');
+                localStorage.removeItem(KEY + '_text');
                 updateCount();
             }
         });
 
-        // 페이지 로드 시 저장된 데이터 불러오기
         loadData();
     </script>
 </body>
